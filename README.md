@@ -1,15 +1,17 @@
 # Resilience Patterns, Service Mesh  & Chaos Testing 
 
-This tutorial walks you through how to install Red Hat OpenShift Service Mesh alongside microservices for a sample app called BookInfo a Redhat OCP cluster. You will also learn how to configure an Istio ingress-gateway to expose a service outside of the service mesh, perform traffic management to set up important tasks like A/B testing and canary deployments, secure your microservice communication and use of metrics, logging and tracing to observe services.
+This tutorial walks you through how to install Red Hat OpenShift Service Mesh alongside microservices for a sample app called BookInfo on a Redhat OpenShift cluster. You will also learn how to configure an Istio ingress-gateway to expose a service outside of the service mesh, perform traffic management to set up important tasks like A/B testing and canary deployments, secure your microservice communication and use of metrics, logging and tracing to observe services, and get started with Chaos engineering!
 
-Based on the open source Istio project, Red Hat OpenShift Service Mesh adds a transparent layer on existing distributed applications. Red Hat OpenShift Service Mesh provides a platform for behavioral insight and operational control over your networked microservices in a service mesh. With Red Hat OpenShift, you can connect, secure, and monitor microservices in your Red Hat OpenShift on IBM Cloud cluster.
+![alt text](image-2.png)
+
+Based on the open source Istio project, Red Hat OpenShift Service Mesh adds a transparent layer on existing distributed applications. Red Hat OpenShift Service Mesh provides a platform for behavioral insight and operational control over your networked microservices in a service mesh. 
 
 [Istio](https://www.ibm.com/think/topics/istio) is an open platform to connect, secure, control and observe microservices, also known as a service mesh, on cloud platforms such as Kubernetes and Red Hat OpenShift.
 
-Cloud Design Patterns must be used to enhance application resilience and availability, and you basically have several choices including these 2 alternatives: 
+Cloud Design Patterns must be used to enhance application resilience and availability, and you basically have several  alternatives: 
 1. Use a service mesh. In a service mesh, you put all the reporting, routing, policies, security logic in sidecar proxies, injected transparently into your application pods. The business logic remains in the code of the application, no changes are required to the application code.
 
-2. Implement the required functionality in the application code. Most of the functionality is already available in various libraries, for example in the Netflix’s Hystrix library for the Java programming language. However, now you have to change your code to use the libraries. You have to put additional effort, your code will bloat, business logic will be mixed with reporting, routing, policies, networking logic. Since your microservices use different programming languages, you have to learn, use, update multiple libraries.
+2. Implement the required functionality in the application code. Most of the functionality is already available in various libraries, for example in the `Netflix’s Hystrix library` for the Java programming language. However, now you have to change your code to use the libraries. You have to put additional effort, your code will bloat, business logic will be mixed with reporting, routing, policies, networking logic. Since your microservices use different programming languages, you have to learn, use, update multiple libraries.
 
 See [The Istio service mesh](https://istio.io/latest/about/service-mesh/) to learn how Istio can perform the tasks mentioned here and more. In this lab, you will explore various Istio features.
 
@@ -303,7 +305,7 @@ EOF
 
 ### Canary deployment
 
-In Canary Deployments, newer versions of services are incrementally rolled out to users to minimize the risk and impact of any bugs introduced by the newer version. To begin incrementally routing traffic to the newer version of the bookinfo service, modify the original `VirtualService` rule:
+In Canary deployments, newer versions of services are incrementally rolled out to users to minimize the risk and impact of any bugs introduced by the newer version. To begin incrementally routing traffic to the newer version of the bookinfo service, modify the original `VirtualService` rule:
 
 1.  Run the below command to send 80% of traffic to v1,
     
@@ -419,60 +421,8 @@ This task shows you how to inject faults to test the resiliency of your applicat
 -  Apply application version routing by running the following commands: 
 
 1. (re)Initialize the following `VirtualService`resources to use v1 only: 
-```yaml
-cat <<EOF | oc replace -f -
-apiVersion: networking.istio.io/v1
-kind: VirtualService
-metadata:
-  name: productpage
-spec:
-  hosts:
-  - productpage
-  http:
-  - route:
-    - destination:
-        host: productpage
-        subset: v1
----
-apiVersion: networking.istio.io/v1
-kind: VirtualService
-metadata:
-  name: reviews
-spec:
-  hosts:
-  - reviews
-  http:
-  - route:
-    - destination:
-        host: reviews
----
-apiVersion: networking.istio.io/v1
-kind: VirtualService
-metadata:
-  name: ratings
-spec:
-  hosts:
-  - ratings
-  http:
-  - route:
-    - destination:
-        host: ratings
-        subset: v1
----
-apiVersion: networking.istio.io/v1
-kind: VirtualService
-metadata:
-  name: details
-spec:
-  hosts:
-  - details
-  http:
-  - route:
-    - destination:
-        host: details
-        subset: v1
----
-EOF
+```bash
+oc replace -f https://raw.githubusercontent.com/Maistra/istio/maistra-2.2/samples/bookinfo/networking/virtual-service-all-v1.yaml
 ```
 
 2. Add specific rule for user `jason` : 
@@ -512,6 +462,7 @@ With the above configuration, this is how requests flow:
 
 To test the Bookinfo application microservices for resiliency, inject a 7s delay between the `reviews:v2` and `ratings` microservices for user `jason`. This test will uncover a bug that was intentionally introduced into the Bookinfo app.
 
+![alt text](image.png)
 Note that the `reviews:v2` service has a 10s hard-coded connection timeout for calls to the `ratings` service. Even with the 7s delay that you introduced, you still expect the end-to-end flow to continue without any errors.
 
 1. Create a fault injection rule to delay traffic coming from the test user jason.
@@ -568,8 +519,11 @@ You expect the Bookinfo home page to load without errors in approximately 7 seco
 ### Understanding what happened
 
 You’ve found a bug. There are hard-coded timeouts in the microservices that have caused the reviews service to fail.
+
 As expected, the 7s delay you introduced doesn’t affect the reviews service because the timeout between the reviews and ratings service is hard-coded at 10s. However, there is also a hard-coded timeout between the productpage and the reviews service, coded as 3s + 1 retry for 6s total. As a result, the productpage call to reviews times out prematurely and throws an error after 6s.
+
 Bugs like this can occur in typical enterprise applications where different teams develop different microservices independently. Istio’s fault injection rules help you identify such anomalies without impacting end users.
+
 Notice that the fault injection test is restricted to when the logged in user is jason. If you log in as any other user, you will not experience any delays.
 
 You would normally fix the problem by:
@@ -629,8 +583,13 @@ EOF
 
 ### Injecting an HTTP abort fault
 
+By elevating the advanced network capabilities of Service Mesh itself, we can run our Chaos Engineering tests on a subset of users/microservices and not damage the entire organization at once. 
+
 Another way to test microservice resiliency is to introduce an HTTP abort fault. In this task, you will introduce an HTTP abort to the `ratings` microservices for the test user `jason`.
+
 In this case, you expect the page to load immediately and display the ```Ratings service is currently unavailable``` message.
+
+![alt text](image-1.png)
 1. Reset Virtual Service to direct all users to v2 except Jason, to v1.
 
 ```yaml
@@ -698,7 +657,7 @@ If the rule propagated successfully to all pods, the page loads immediately and 
 
 ### Chaos Testing in production
 
-1.Check your application resilience by killing pods. Note that dedicated Chaos engineering tools exist to do so, like Chaos Monkey or others. Here a simple kill will do the job, but tools exist for more complex scenarios.
+1.Check your application resilience by killing pods. Note that dedicated Chaos engineering tools exist to do so, like `Chaos Monkey`, `Litmus` or others. Here a simple kill will do the job, but tools exist for more complex scenarios.
 
 `oc exec $(oc get pods -l app=details -o jsonpath='{.items[0].metadata.name}') -- pkill ruby`
 
