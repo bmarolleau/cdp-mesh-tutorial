@@ -2,7 +2,7 @@
 
 This tutorial walks you through how to install Red Hat OpenShift Service Mesh alongside microservices for a sample app called BookInfo on a Redhat OpenShift cluster. You will also learn how to configure an Istio ingress-gateway to expose a service outside of the service mesh, perform traffic management to set up important tasks like A/B testing and canary deployments, secure your microservice communication and use of metrics, logging and tracing to observe services, and get started with Chaos engineering!
 
-![alt text](image-2.png)
+<img src="pictures/image-2bis.png" alt="drawing" width="300"/>
 
 Based on the open source Istio project, Red Hat OpenShift Service Mesh adds a transparent layer on existing distributed applications. Red Hat OpenShift Service Mesh provides a platform for behavioral insight and operational control over your networked microservices in a service mesh. 
 
@@ -183,7 +183,7 @@ The components deployed on the service mesh by default are not exposed outside t
 
 1.  Configure the bookinfo default route with the Istio Ingress Gateway.
     
--   `oc create -f https://raw.githubusercontent.com/Maistra/istio/maistra-2.2/samples/bookinfo/networking/bookinfo-gateway.yaml` 
+-   ```oc create -f https://raw.githubusercontent.com/bmarolleau/cdp-mesh-tutorial/refs/heads/main/samples/istio/bookinfo/bookinfo-gateway.yaml```
     
 -   Get the **ROUTE** of the Istio Ingress Gateway.
     
@@ -256,15 +256,18 @@ A/B testing is a method of performing identical tests against two separate servi
 
 1.  Run the following command to create default destination rules for the Bookinfo services,
     
-
-`oc create -f https://raw.githubusercontent.com/Maistra/istio/maistra-2.2/samples/bookinfo/networking/destination-rule-all.yaml` 
+```bash
+oc create -f https://raw.githubusercontent.com/bmarolleau/cdp-mesh-tutorial/refs/heads/main/samples/istio/bookinfo/destination-rule-all.yaml
+```
 
 -   Tip: A [DestinationRule](https://istio.io/latest/docs/reference/config/networking/virtual-service/#Destination) defines policies that apply to traffic intended for a service after routing has occurred. These rules specify configuration for load balancing, connection pool size from the sidecar, and outlier detection settings to detect and evict unhealthy hosts from the load balancing pool. Any destination `host` and `subset` referenced in a `VirtualService` rule must be defined in a corresponding `DestinationRule`.
     
 -   A VirtualService defines a set of traffic routing rules to apply when a host is addressed. Each routing rule defines matching criteria for traffic of a specific protocol. If the traffic is matched, then it is sent to a named destination service (or subset/version of it) defined in the registry. Run the below command to send all reviews traffic to v1:
     
 
-`oc create -f https://raw.githubusercontent.com/Maistra/istio/maistra-2.2/samples/bookinfo/networking/virtual-service-all-v1.yaml` 
+```yaml
+oc create -f https://raw.githubusercontent.com/bmarolleau/cdp-mesh-tutorial/refs/heads/main/samples/istio/bookinfo/virtual-service-all-v1.yaml
+```
 
 -   Tip: The `VirtualService` defines a rule that captures all HTTP traffic coming in to reviews service, and routes 100% of the traffic to pods of the service with label "version: v1". A subset or version of a route destination is identified with a reference to a named service subset which must be declared in a corresponding `DestinationRule`.
     
@@ -310,7 +313,9 @@ In Canary deployments, newer versions of services are incrementally rolled out t
 1.  Run the below command to send 80% of traffic to v1,
     
 
-`oc replace -f https://raw.githubusercontent.com/Maistra/istio/maistra-2.2/samples/bookinfo/networking/virtual-service-reviews-80-20.yaml` 
+```bash
+oc replace -f https://raw.githubusercontent.com/bmarolleau/cdp-mesh-tutorial/refs/heads/main/samples/istio/bookinfo/virtual-service-reviews-80-20.yaml
+``` 
 
 Tip: In the modified rule, the routed traffic is split between two different subsets of the reviews microservice. In this manner, traffic to the modernized version 2 of reviews is controlled on a percentage basis to limit the impact of any unforeseen bugs. This rule can be modified over time until eventually all traffic is directed to the newer version of the service.
     
@@ -319,7 +324,7 @@ Tip: In the modified rule, the routed traffic is split between two different sub
     
 3. To route all traffic to reviews v3: 
 ```
-oc replace -f https://raw.githubusercontent.com/Maistra/istio/maistra-2.2/samples/bookinfo/networking/virtual-service-reviews-v3.yaml
+oc replace -f https://raw.githubusercontent.com/bmarolleau/cdp-mesh-tutorial/refs/heads/main/samples/istio/bookinfo/virtual-service-reviews-v3.yaml
 ```
 
 Reset the `reviews` virtual service :
@@ -422,7 +427,7 @@ This task shows you how to inject faults to test the resiliency of your applicat
 
 1. (re)Initialize the following `VirtualService`resources to use v1 only: 
 ```bash
-oc replace -f https://raw.githubusercontent.com/Maistra/istio/maistra-2.2/samples/bookinfo/networking/virtual-service-all-v1.yaml
+oc replace -f https://raw.githubusercontent.com/bmarolleau/cdp-mesh-tutorial/refs/heads/main/samples/istio/bookinfo/virtual-service-all-v1.yaml
 ```
 
 2. Add specific rule for user `jason` : 
@@ -462,7 +467,7 @@ With the above configuration, this is how requests flow:
 
 To test the Bookinfo application microservices for resiliency, inject a 7s delay between the `reviews:v2` and `ratings` microservices for user `jason`. This test will uncover a bug that was intentionally introduced into the Bookinfo app.
 
-![alt text](image.png)
+![alt text](pictures/image-bis.png)
 Note that the `reviews:v2` service has a 10s hard-coded connection timeout for calls to the `ratings` service. Even with the 7s delay that you introduced, you still expect the end-to-end flow to continue without any errors.
 
 1. Create a fault injection rule to delay traffic coming from the test user jason.
@@ -589,7 +594,7 @@ Another way to test microservice resiliency is to introduce an HTTP abort fault.
 
 In this case, you expect the page to load immediately and display the ```Ratings service is currently unavailable``` message.
 
-![alt text](image-1.png)
+![alt text](pictures/image-1bis.png)
 1. Reset Virtual Service to direct all users to v2 except Jason, to v1.
 
 ```yaml
