@@ -669,6 +669,24 @@ If the rule propagated successfully to all pods, the page loads immediately and 
 
 2. Check what happens in your apps. It is still responding, Service mesh in `Kiali`reports warnings but the application did not crash. The crash in the details microservice did not cause other microservices to fail. This behavior means you did not have a cascading failure in this situation. Instead, you had gradual service degradation: despite one microservice crashing, the application could still provide useful functionality. It displayed the reviews and the basic information about the book.
 
+*Fig. Error message but the app is still okay:* 
 ![alt text](pictures/image-15.png)
 
+*Fig. Istio/Kiali error reporting:* 
 ![alt text](pictures/image-16.png)
+
+
+## References / Further reading
+### OpenShift Service Mesh tutorials
+-  [https://github.com/rhthsa/openshift-demo/blob/main/openshift-service-mesh.md](https://github.com/rhthsa/openshift-demo/blob/main/openshift-service-mesh.md)
+-  [http://redhatgov.io/workshops/openshift_service_mesh_v1.0/](http://redhatgov.io/workshops/openshift_service_mesh_v1.0/)
+-  https://cloud.ibm.com/docs/solution-tutorials?topic=solution-tutorials-openshift-service-mesh
+### Istio
+-  [https://istio.io/latest/docs/ops/deployment/architecture](https://istio.io/latest/docs/ops/deployment/architecture)
+-  [https://www.envoyproxy.io/](https://www.envoyproxy.io/)
+-  [https://redhat-scholars.github.io/istio-tutorial/istio-tutorial/1.9.x/index.html](https://redhat-scholars.github.io/istio-tutorial/istio-tutorial/1.9.x/index.html)
+
+### Chaos Testing/Engineering 
+-  [https://medium.com/google-cloud/gremlin-chaos-engineering-on-google-cloud-2568f9fc70c9](https://medium.com/google-cloud/gremlin-chaos-engineering-on-google-cloud-2568f9fc70c9)
+-  Awesome Chaos Engineering: awesome [Chaos Engineering](http://principlesofchaos.org/) resources.
+-  [https://github.com/dastergon/awesome-chaos-engineering](https://github.com/dastergon/awesome-chaos-engineering)
