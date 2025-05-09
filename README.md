@@ -2,9 +2,6 @@
 
 This tutorial walks you through how to install Red Hat OpenShift Service Mesh alongside microservices for a sample app called BookInfo on a Redhat OpenShift cluster. You will also learn how to configure an Istio ingress-gateway to expose a service outside of the service mesh, perform traffic management to set up important tasks like A/B testing and canary deployments, secure your microservice communication and use of metrics, logging and tracing to observe services, and get started with Chaos engineering!
 
- <p>
- <img src="pictures/image-2bis.png" width=80% height=80%>
-</p>
 Based on the open source Istio project, Red Hat OpenShift Service Mesh adds a transparent layer on existing distributed applications. Red Hat OpenShift Service Mesh provides a platform for behavioral insight and operational control over your networked microservices in a service mesh. 
 
 [Istio](https://www.ibm.com/think/topics/istio) is an open platform to connect, secure, control and observe microservices, also known as a service mesh, on cloud platforms such as Kubernetes and Red Hat OpenShift.
@@ -15,6 +12,10 @@ Cloud Design Patterns must be used to enhance application resilience and availab
 2. Implement the required functionality in the application code. Most of the functionality is already available in various libraries, for example in the `Netflix’s Hystrix library` for the Java programming language. However, now you have to change your code to use the libraries. You have to put additional effort, your code will bloat, business logic will be mixed with reporting, routing, policies, networking logic. Since your microservices use different programming languages, you have to learn, use, update multiple libraries.
 
 See [The Istio service mesh](https://istio.io/latest/about/service-mesh/) to learn how Istio can perform the tasks mentioned here and more. In this lab, you will explore various Istio features.
+
+ <p>
+ <img src="pictures/image-2bis.png" width=80% height=80%>
+</p>
 
 ## Objectives
 
