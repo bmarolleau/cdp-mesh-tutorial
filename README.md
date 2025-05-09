@@ -675,7 +675,7 @@ If the rule propagated successfully to all pods, the page loads immediately and 
  <img src="pictures/image-15.png" width=80% height=80%>
 </p>
 
--  *Fig. Istio/Kiali error reporting: * 
+-  *Fig. Istio/Kiali error reporting:* 
 
 ![alt text](pictures/image-16.png)
 
