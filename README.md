@@ -670,10 +670,13 @@ If the rule propagated successfully to all pods, the page loads immediately and 
 
 2. Check what happens in your apps. It is still responding, Service mesh in `Kiali`reports warnings but the application did not crash. The crash in the details microservice did not cause other microservices to fail. This behavior means you did not have a cascading failure in this situation. Instead, you had gradual service degradation: despite one microservice crashing, the application could still provide useful functionality. It displayed the reviews and the basic information about the book.
 
-*Fig. Error message but the app is still okay:* 
-![alt text](pictures/image-15.png)
+-  *Fig. Error message but the app is still okay:* 
+ <p>
+ <img src="pictures/image-15.png" width=80% height=80%>
+</p>
 
-*Fig. Istio/Kiali error reporting:* 
+-  *Fig. Istio/Kiali error reporting: * 
+
 ![alt text](pictures/image-16.png)
 
 
