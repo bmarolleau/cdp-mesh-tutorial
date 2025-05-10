@@ -1,20 +1,21 @@
 # Resilience Patterns, Service Mesh  & Chaos Testing 
 
-This tutorial walks you through how to install Red Hat OpenShift Service Mesh alongside microservices for a sample app called BookInfo on a Redhat OpenShift cluster. You will also learn how to configure an Istio ingress-gateway to expose a service outside of the service mesh, perform traffic management to set up important tasks like A/B testing and canary deployments, secure your microservice communication and use of metrics, logging and tracing to observe services, and get started with Chaos engineering!
+This tutorial walks you through how to install Red Hat OpenShift Service Mesh alongside microservices for a sample app called BookInfo on a Redhat OpenShift cluster. You will also learn how to configure an `Istio` ingress-gateway to expose a service outside of the service mesh, perform traffic management to set up important tasks like `A/B testing` and `canary deployments`, **secure** your microservice communication and use of metrics, logging and tracing to **observe** services, and get started with **Chaos engineering**!
 
 Based on the open source Istio project, Red Hat OpenShift Service Mesh adds a transparent layer on existing distributed applications. Red Hat OpenShift Service Mesh provides a platform for behavioral insight and operational control over your networked microservices in a service mesh. 
 
 [Istio](https://www.ibm.com/think/topics/istio) is an open platform to connect, secure, control and observe microservices, also known as a service mesh, on cloud platforms such as Kubernetes and Red Hat OpenShift.
 
-Cloud Design Patterns must be used to enhance application resilience and availability, and you basically have several  alternatives: 
-1. Use a service mesh. In a service mesh, you put all the reporting, routing, policies, security logic in sidecar proxies, injected transparently into your application pods. The business logic remains in the code of the application, no changes are required to the application code.
+**Cloud Design Patterns** must be used in every app design to enhance  resilience and availability, and you basically have several  alternatives: 
+1. Use a **service mesh**. In a service mesh, you put all the reporting, routing, policies, security logic in sidecar proxies, injected transparently into your application pods. The business logic remains in the code of the application, no changes are required to the application code.
 
-2. Implement the required functionality in the application code. Most of the functionality is already available in various libraries, for example in the `Netflix’s Hystrix library` for the Java programming language. However, now you have to change your code to use the libraries. You have to put additional effort, your code will bloat, business logic will be mixed with reporting, routing, policies, networking logic. Since your microservices use different programming languages, you have to learn, use, update multiple libraries.
+2. Implement the required functionality **in the application code**. Most of the functionality is already available in various libraries, for example in the `Netflix’s Hystrix library` for the Java programming language. However, now you have to change your code to use the libraries. You have to put additional effort, your code will bloat, business logic will be mixed with reporting, routing, policies, networking logic. Since your microservices use different programming languages, you have to learn, use, update multiple libraries.
 
 See [The Istio service mesh](https://istio.io/latest/about/service-mesh/) to learn how Istio can perform the tasks mentioned here and more. In this lab, you will explore various Istio features.
 
+-  *Fig. Chaos Engineering , break things before they break!* 
  <p>
- <img src="pictures/image-2bis.png" width=80% height=80%>
+ <img src="pictures/image-2bis.png" align=center width=80% height=80%>
 </p>
 
 ## Objectives
@@ -28,24 +29,25 @@ See [The Istio service mesh](https://istio.io/latest/about/service-mesh/) to lea
 
 ![Architecture Diagram](https://cloud.ibm.com/docs-content/v4/content/dc9841ac097f1ff1a66d327cb917ecd75f661510/solution-tutorials/images/solution57-openshift-service-mesh/Architecture.png)
 
-1.  The admin provisions a Red Hat OpenShift on IBM Cloud cluster and installs the Service Mesh Operator along with other Telemetry Operators.
-2.  Admin creates an `istio-system-teamX` namespace(project) and creates `ServiceMeshControlPlane`.
-3.  Admin creates a `bookinfo-teamX` namespace with automatic sidecar injection enabled and deploys the BookInfo app (with four separate microservices) in to the Service Mesh.
-4.  Admin exposes the app for external traffic with the Istio Ingress Gateway.
-5.  The user securely(HTTPS) accesses the application via browser.
-6.  The admin monitors the health and performance of the microservices using the metrics, traces, logs.
+1. `Admin` (you) provisions a Red Hat OpenShift cluster (if not already one) and installs the Service Mesh Operator along with other Telemetry Operators.
+2. `Admin` creates an `istio-system-teamX` namespace(project) and creates `ServiceMeshControlPlane`. `X` is your team number.
+3. `Admin` creates a `bookinfo-teamX` namespace with automatic sidecar injection enabled and deploys the BookInfo app (with four separate microservices) in to the Service Mesh.
+4. `Admin` exposes the app for external traffic with the Istio Ingress Gateway (optional).
+5. The user securely (HTTPS) accesses the application via browser.
+6. `Admin` monitors the health and performance of the microservices using the metrics, traces, logs, and perform fault injection tasks.
 
-### Access the cluster using the IBM Cloud Shell
+### Access the cluster
 
-From your **terminal**, create a project called bookinfo-teamX with `oc new-project` command. The project will hold the application created after installing the service mesh.
+From your **terminal**, create a project called `bookinfo-teamX` with `oc new-project` command. The project will hold the application created after installing the service mesh.
 ```
 oc new-project bookinfo-teamX
 ```
 ## Step 1: Install Service Mesh - Istio
 
-In this section, you will install Service Mesh - Istio on the cluster. Installing the Service Mesh involves installing the Elasticsearch, Jaeger, Kiali and Service Mesh Operators, creating and managing a `ServiceMeshControlPlane` resource to deploy the control plane, and creating a `ServiceMeshMemberRoll` resource to specify the namespaces associated with the Service Mesh.
+In this section, you will install Service Mesh - Istio on the cluster. Installing the Service Mesh involves installing the `Elasticsearch`, `Jaeger`, `Kiali` and `Service Mesh` Operators, creating and managing a `ServiceMeshControlPlane` resource to deploy the control plane, and creating a `ServiceMeshMemberRoll` resource to specify the namespaces associated with the Service Mesh.
 
-Note: Some of the projects have multiple operators. Be careful to install the ones specified below
+Note: Some of the projects have multiple operators. Be careful to install the ones specified below :
+
 **Elasticsearch** - Based on the open source Elasticsearch project that enables you to configure and manage an Elasticsearch cluster for tracing and logging with Jaeger.
 
 **Jaeger** - Based on the open source Jaeger project, lets you perform tracing to monitor and troubleshoot transactions in complex distributed systems.
@@ -83,7 +85,7 @@ The Red Hat OpenShift Service Mesh operator uses a `ServiceMeshControlPlane` res
 
 ### Create a ServiceMeshMemberRoll
 
-ServiceMeshMemberRoll resource is used to to specify the namespaces associated with the Service Mesh.
+`ServiceMeshMemberRoll` resource is used to to specify the namespaces associated with the Service Mesh.
 
 1.  Navigate to **Operators** → **Installed Operators** again.
 2.  Click on **Red Hat OpenShift Service Mesh**.
@@ -126,7 +128,7 @@ The end-to-end architecture of the application is shown below.
 
 ![Architecture using Istio](https://cloud.ibm.com/docs-content/v4/content/dc9841ac097f1ff1a66d327cb917ecd75f661510/solution-tutorials/images/solution57-openshift-service-mesh/withistio.svg)
 
-Figure 2. Architecture using Istio
+*Fig. Bookinfo Architecture using Istio*
 
 Red Hat OpenShift Service Mesh relies on the Envoy sidecars within the application’s pod to provide Service Mesh capabilities to the application. You can enable automatic sidecar injection or manage it manually. Automatic injection using the annotation is the recommended way.
 
@@ -138,7 +140,8 @@ Red Hat OpenShift Service Mesh relies on the Envoy sidecars within the applicati
 IMPORTANT: The `bookinfo.yaml` file must be annotated with  `sidecar.istio.io/inject: "true"` on each `Deployment` to enable automatic injection of the Istio sidecar for Red Hat OpenShift Service Mesh. So, these pods will also include an Envoy sidecar as they are started in the cluster.
 
 
--   Tip: An installation of Red Hat OpenShift Service Mesh differs from upstream Istio community installations in multiple ways. Refer [this link](https://docs.openshift.com/container-platform/4.13/service_mesh/v2x/ossm-vs-community.html) comparing Service Mesh and Istio. By default, Istio injects the sidecar if you have labeled the project `istio-injection=enabled`. Red Hat OpenShift Service Mesh handles this differently and requires you to opt in to having the sidecar automatically injected to a deployment, so you are not required to label the project. This avoids injecting a sidecar if it is not wanted (for example, in build or deploy pods).
+-   Tip: An installation of Red Hat OpenShift Service Mesh differs from upstream Istio community installations in multiple ways. Refer [this link](https://docs.openshift.com/container-platform/4.13/service_mesh/v2x/ossm-vs-community.html) comparing Service Mesh and Istio. 
+By default, Istio injects the sidecar if you have labeled the project `istio-injection=enabled`. Red Hat OpenShift Service Mesh handles this differently and requires you to opt in to having the sidecar automatically injected to a deployment, so you are not required to label the project. This avoids injecting a sidecar if it is not wanted (for example, in build or deploy pods).
 
 2. Edit each deployment with the missing `sidecar.istio.io/inject: "true"` annotation on each Deployment.
 ```yaml
@@ -670,12 +673,12 @@ If the rule propagated successfully to all pods, the page loads immediately and 
 
 2. Check what happens in your apps. It is still responding, Service mesh in `Kiali`reports warnings but the application did not crash. The crash in the details microservice did not cause other microservices to fail. This behavior means you did not have a cascading failure in this situation. Instead, you had gradual service degradation: despite one microservice crashing, the application could still provide useful functionality. It displayed the reviews and the basic information about the book.
 
--  *Fig. Error message but the app is still okay:* 
+-  *Fig. Hereunder, Error message but the app is still okay:* 
  <p>
  <img src="pictures/image-15.png" width=80% height=80%>
 </p>
 
--  *Fig. Istio/Kiali error reporting:* 
+-  *Fig. Below, Istio/Kiali error reporting:* 
 
 ![alt text](pictures/image-16.png)
 
