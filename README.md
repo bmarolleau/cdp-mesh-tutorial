@@ -199,7 +199,7 @@ The components deployed on the service mesh by default are not exposed outside t
 ```
 INGRESS_HOST=$(oc get route -n istio-system-teamX | grep istio-ingressgateway | awk ' { print $2"/productpage" }')
 ```    
- Visit the application by going to `http://$INGRESS_HOST/productpage` in a new tab. If you keep hitting Refresh, you should see different versions of the page in random order (v1 - no stars, v2 - black stars, v3 - red stars). **_Keep that browser tab open for later_**.
+ Visit the application by going to `http://$INGRESS_HOST` in a new tab. If you keep hitting Refresh, you should see different versions of the page in random order (v1 - no stars, v2 - black stars, v3 - red stars). **_Keep that browser tab open for later_**.
 
 ## Step 4: Observe service telemetry: metrics and tracing
 
@@ -223,7 +223,7 @@ Grafana allows you to query, visualize, alert on and understand your metrics no 
 4.  Go to your Shell tab/window and generate a small load to the app by sending traffic to the Ingress host location you set in the last section.
     
 
-  `for i in {1..20}; do sleep 0.5; curl -I $INGRESS_HOST/productpage; done` 
+  `for i in {1..20}; do sleep 0.5; curl -I $INGRESS_HOST; done` 
     
 
 Open each twisty to see more of the dashboard. Choose different services in the **Service** drop down. This Grafana dashboard provides metrics for each workload. Explore the other dashboards provided as well.
@@ -376,8 +376,8 @@ EOF
 ```
 
 ### Circuit breaker
-Référence:  [https://istio.io/latest/docs/tasks/traffic-management/circuit-breaking/](https://istio.io/latest/docs/tasks/traffic-management/circuit-breaking/)
-
+**Reference**:  [https://istio.io/latest/docs/tasks/traffic-management/circuit-breaking/](https://istio.io/latest/docs/tasks/traffic-management/circuit-breaking/)
+This task shows you how to configure circuit breaking for connections, requests, and outlier detection.
 -   Update the `productpage` DestinationRule with Circuit breaking logic: 
 
 ````yaml
@@ -404,11 +404,50 @@ spec:
       version: v1
 EOF
 ````
+**Explanation**
+[`connectionPool`](https://istio.io/latest/docs/reference/config/networking/destination-rule/#TrafficPolicy-connection_pool) Settings controlling the volume of connections to an upstream service
+[`http1MaxPendingRequests`](dddhttps://istio.io/latest/docs/reference/config/networking/destination-rule/#ConnectionPoolSettings-HTTPSettings-http1_max_pending_requests) Maximum number of requests that will be queued while waiting for a ready connection pool connection. 
+[`maxRequestsPerConnection`](https://istio.io/latest/docs/reference/config/networking/destination-rule/#ConnectionPoolSettings-HTTPSettings-max_requests_per_connection) Maximum number of requests per connection to a backend. Setting this parameter to 1 disables keep alive. Default 0, meaning “unlimited”
+
+In the `DestinationRule` settings, you specified `maxConnections: 1` and `http1MaxPendingRequests: 1`. These rules indicate that if you exceed more than one connection and request concurrently, you should see some failures when the istio-proxy opens the circuit for further requests and connections.
 
 -   Check that the Circuit Breaker is applied in your service from Kiali: 
 ![alt text](pictures/image-4.png)
 
--   Complexify a bit with advanced **circuit breaking** and **outlier detection**: 
+-  Test your Circuit Breaker 
+
+1. Create a client - Fortio deployment
+```bash
+oc apply -f https://raw.githubusercontent.com/istio/istio/release-1.26/samples/httpbin/sample-client/fortio-deploy.yaml
+```
+2. Edit the deployment and inject the annotation `sidecar.istio.io/inject: "true"`
+
+3. `export FORTIO_POD=$(oc  get pods -l app=fortio -o 'jsonpath={.items[0].metadata.name}')`
+
+4. Call the service with two concurrent connections (-c 2) and send 20 requests (-n 20)
+```bash
+oc exec "$FORTIO_POD" -c fortio -- /usr/bin/fortio load -c 2 -qps 0 -n 20 -loglevel Warning $INGRESS_HOST
+```
+Almost all requests made it through! 
+```console
+Code 200 : 14 (70.0 %)
+Code 503 : 6 (30.0 %)
+```
+
+5. Bring the number of concurrent connections up to 4
+```bash
+oc exec "$FORTIO_POD" -c fortio -- /usr/bin/fortio load -c 4 -qps 0 -n 20 -loglevel Warning $INGRESS_HOST
+```
+```console
+Code 200 : 7 (35.0 %)
+Code 503 : 13 (65.0 %)
+```
+See the expected circuit breaking behavior. Only 35% of the requests succeeded and the rest were trapped by circuit breaking.
+
+-   Complexify a bit with advanced **circuit breaking** with **outlier detection**: 
+
+Outlier detection is a Circuit breaker implementation that tracks the status of each individual host in the upstream service: 
+
 ````yaml
 cat <<EOF | oc replace -f -
 # Places some circuit breaking logic on productpage
@@ -426,9 +465,9 @@ spec:
         http1MaxPendingRequests: 1
         maxRequestsPerConnection: 1
     outlierDetection:
-      consecutiveGatewayErrors: 1
-      interval: 900s
-      baseEjectionTime: 900s
+      consecutive5xxErrors: 1
+      interval: 60s
+      baseEjectionTime: 60s
       maxEjectionPercent: 100
   subsets:
   - name: v1
@@ -436,16 +475,20 @@ spec:
       version: v1
 EOF
 ````
+**Explanation:**
 1.  If found error 1 times (`consecutiveErrors`) 
-2. then eject that pod from pool for 15 mintues (`baseEjectionTime`)
+2. then eject that pod from pool for 1 mintue (`baseEjectionTime`)
 3. Maximum number of pod that can be ejected is 100% (`maxEjectionPercent`)
-4. Check this every 15 min (`interval`)
+4. Check this every 1 min (`interval`)
 `OutlierDetection` refers to the doc:  [OutlierDetection](https://istio.io/latest/docs/reference/config/networking/destination-rule/#OutlierDetection) 
 
 ![alt text](pictures/image-3.png)
 
--   Inject a workload and play with the settings. In real life a workload simulation tool can be used like `jmeter` or equivalent, but a simple curl can also do the job in simple cases.
-`while true; do curl -I -s  $INGRESS_HOST/productpage;sleep 1; done`
+-   Inject a workload and play with the settings. In real life a workload simulation tool can be used like [`fortio`](https://github.com/fortio/fortio), `jmeter` or equivalent, but a simple curl can also do the job in simple cases.
+```
+oc exec "$FORTIO_POD" -c fortio -- /usr/bin/fortio load -c 4 -qps 0 -n 20 -loglevel Warning $INGRESS_HOST
+```
+Please with the concurrency parameter above and see what happens with your service. If you get a `no healthy upstream` message, this means that your service has been evicted by the outlier detection. Another idea would be to use outlier detection with a backend service like `reviews`...
 
 
 ## Step 6 - Chaos Testing / Fault Injection
