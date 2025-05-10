@@ -58,7 +58,7 @@ Note: Some of the projects have multiple operators. Be careful to install the on
 
 ### Install the Operators // Skip this step
 
-The cluster admin has already installed those operators for you , in the default `openshift-operators` project and makes the Operators available to all projects in the cluster. Please skip but review the following instructions: 
+**The cluster admin has already installed those operators for you , in the default `openshift-operators`** project and makes the Operators available to all projects in the cluster. **Please skip this step** but review the following instructions: 
 
 1.  On the left pane of **Red Hat OpenShift web console**, select **Administrator** in the drop down.
 2.  Select **Operators** and then **OperatorHub**.
@@ -317,12 +317,11 @@ In Canary deployments, newer versions of services are incrementally rolled out t
 
 1.  Run the below command to send 80% of traffic to v1,
     
-
 ```bash
 oc replace -f https://raw.githubusercontent.com/bmarolleau/cdp-mesh-tutorial/refs/heads/main/samples/istio/bookinfo/virtual-service-reviews-80-20.yaml
 ``` 
 
-Tip: In the modified rule, the routed traffic is split between two different subsets of the reviews microservice. In this manner, traffic to the modernized version 2 of reviews is controlled on a percentage basis to limit the impact of any unforeseen bugs. This rule can be modified over time until eventually all traffic is directed to the newer version of the service.
+**Tip:** In the modified rule, the routed traffic is split between two different subsets of the reviews microservice. In this manner, traffic to the modernized version 2 of reviews is controlled on a percentage basis to limit the impact of any unforeseen bugs. This rule can be modified over time until eventually all traffic is directed to the newer version of the service.
     
 2. View the bookinfo application again in your browser tab. Ensure that you are using a hard refresh (command + Shift + R on Mac or Ctrl + F5 on windows) to remove any browser caching. You should notice that the bookinfo application should swap between V1 or V2 at about the weight you specified.
 ![alt text](pictures/image-13.png)
@@ -348,7 +347,33 @@ spec:
         host: reviews
 EOF
 ````
+### Other rules 
 
+Please refer to this git repo to review other examples of rules and see the capabilites of Istio: 
+- Istio networking:  [samples/bookinfo/networking](https://github.com/maistra/istio/tree/maistra-2.6/samples/bookinfo/networking)
+
+For example, `virtual-service-reviews-50-v3.yaml`
+```yaml
+cat <<EOF | oc replace -f -
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: reviews
+spec:
+  hosts:
+    - reviews
+  http:
+  - route:
+    - destination:
+        host: reviews
+        subset: v1
+      weight: 50
+    - destination:
+        host: reviews
+        subset: v3
+      weight: 50
+EOF
+```
 
 ### Circuit breaker
 Référence:  [https://istio.io/latest/docs/tasks/traffic-management/circuit-breaking/](https://istio.io/latest/docs/tasks/traffic-management/circuit-breaking/)
@@ -383,14 +408,7 @@ EOF
 -   Check that the Circuit Breaker is applied in your service from Kiali: 
 ![alt text](pictures/image-4.png)
 
--   Complexify a bit with advanced circuit breaking and outlier detection
-1.  If found error 1 times (`consecutiveErrors`) 
-2. then eject that pod from pool for 15 mintues (`baseEjectionTime`)
-3. Maximum number of pod that can be ejected is 100% (`maxEjectionPercent`)
-4. Check this every 15 min (`interval`)
-`OutlierDetection` refers to the doc:  [OutlierDetection](https://istio.io/latest/docs/reference/config/networking/destination-rule/#OutlierDetection) 
-
-
+-   Complexify a bit with advanced **circuit breaking** and **outlier detection**: 
 ````yaml
 cat <<EOF | oc replace -f -
 # Places some circuit breaking logic on productpage
@@ -418,6 +436,12 @@ spec:
       version: v1
 EOF
 ````
+1.  If found error 1 times (`consecutiveErrors`) 
+2. then eject that pod from pool for 15 mintues (`baseEjectionTime`)
+3. Maximum number of pod that can be ejected is 100% (`maxEjectionPercent`)
+4. Check this every 15 min (`interval`)
+`OutlierDetection` refers to the doc:  [OutlierDetection](https://istio.io/latest/docs/reference/config/networking/destination-rule/#OutlierDetection) 
+
 ![alt text](pictures/image-3.png)
 
 -   Inject a workload and play with the settings. In real life a workload simulation tool can be used like `jmeter` or equivalent, but a simple curl can also do the job in simple cases.
