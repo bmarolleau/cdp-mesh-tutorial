@@ -188,7 +188,9 @@ The components deployed on the service mesh by default are not exposed outside t
 
 1.  Configure the bookinfo default route with the Istio Ingress Gateway.
     
--   ```oc create -f https://raw.githubusercontent.com/bmarolleau/cdp-mesh-tutorial/refs/heads/main/samples/istio/bookinfo/bookinfo-gateway.yaml```
+```bash
+oc create -f https://raw.githubusercontent.com/bmarolleau/cdp-mesh-tutorial/refs/heads/main/samples/istio/bookinfo/bookinfo-gateway.yaml
+```
     
 -   Get the **ROUTE** of the Istio Ingress Gateway.
     
@@ -259,26 +261,33 @@ Pilot translates high-level rules into low-level configurations and distributes 
 
 A/B testing is a method of performing identical tests against two separate service versions in order to determine which performs better. To prevent Istio from performing the default routing behavior between the original and modernized service, define the following rules:
 
-1.  Run the following command to create default destination rules for the Bookinfo services,
+1.  **Apply initial Destination rules**: 
+
+Run the following command to create default destination rules for the Bookinfo services,
     
 ```bash
 oc create -f https://raw.githubusercontent.com/bmarolleau/cdp-mesh-tutorial/refs/heads/main/samples/istio/bookinfo/destination-rule-all.yaml
 ```
+This object is responsible for defining policies that will be applied to a certain Envoy proxy. All actions defined in ``DestinationRules`` take place after routing to the pod. Policies can specify rules for traffic balancing between endpoints (pods), circuit breaking, or differentiating between subsets of the service.
 
--   Tip: A [DestinationRule](https://istio.io/latest/docs/reference/config/networking/virtual-service/#Destination) defines policies that apply to traffic intended for a service after routing has occurred. These rules specify configuration for load balancing, connection pool size from the sidecar, and outlier detection settings to detect and evict unhealthy hosts from the load balancing pool. Any destination `host` and `subset` referenced in a `VirtualService` rule must be defined in a corresponding `DestinationRule`.
+A [`DestinationRule`](https://istio.io/latest/docs/reference/config/networking/virtual-service/#Destination) defines policies that apply to traffic intended for a service after routing has occurred. These rules specify configuration for load balancing, connection pool size from the sidecar, and outlier detection settings to detect and evict unhealthy hosts from the load balancing pool. Any destination `host` and `subset` referenced in a `VirtualService` rule must be defined in a corresponding `DestinationRule`.
     
--   A VirtualService defines a set of traffic routing rules to apply when a host is addressed. Each routing rule defines matching criteria for traffic of a specific protocol. If the traffic is matched, then it is sent to a named destination service (or subset/version of it) defined in the registry. Run the below command to send all reviews traffic to v1:
+
+2.  **Create Virtual Services**: 
+
+
+A `VirtualService` defines a set of traffic routing rules to apply when a host is addressed. Each routing rule defines matching criteria for traffic of a specific protocol. If the traffic is matched, then it is sent to a named destination service (or subset/version of it) defined in the registry. Run the below command to send all reviews traffic to v1:
     
 
 ```yaml
 oc create -f https://raw.githubusercontent.com/bmarolleau/cdp-mesh-tutorial/refs/heads/main/samples/istio/bookinfo/virtual-service-all-v1.yaml
 ```
 
--   Tip: The `VirtualService` defines a rule that captures all HTTP traffic coming in to reviews service, and routes 100% of the traffic to pods of the service with label "version: v1". A subset or version of a route destination is identified with a reference to a named service subset which must be declared in a corresponding `DestinationRule`.
+The `VirtualService` defines a rule that captures all HTTP traffic coming in to reviews service, and routes 100% of the traffic to pods of the service with label "version: v1". A subset or version of a route destination is identified with a reference to a named service subset which must be declared in a corresponding `DestinationRule`.
     
--   View the bookinfo application in your browser tab. You should only get the v1 of the BookInfo application, i.e., no stars for ratings.
+3. View the bookinfo application in your browser tab. You should only get the v1 of the BookInfo application, i.e., no stars for ratings.
     
--   To enable the Istio service mesh for A/B testing against the new service version, modify the original `VirtualService` rule to send only Firefox traffic to v2. You may change the `user-agent` to any other installed browser on your machine:
+4. To enable the Istio service mesh for A/B testing against the new service version, modify the original `VirtualService` rule to send only Firefox traffic to v2. You may change the `user-agent` to any other installed browser on your machine:
     
 
 ```yaml
@@ -306,10 +315,9 @@ spec:
 EOF
 ```
 
-1.  Tip: In Istio `VirtualService` rules, there can be only one rule for each service and therefore when defining multiple [HTTPRoute](https://istio.io/latest/docs/reference/config/networking/virtual-service/#HTTPRoute) blocks, the order in which they are defined in the yaml matters. Hence, the original `VirtualService` rule is modified rather than creating a new rule. With the modified rule, incoming requests originating from `Firefox` browsers will go to the v2 version(Black stars) of bookinfo. All other requests fall-through to the next block, which routes all traffic to the v3(Red Stars) version of bookinfo.
+In Istio `VirtualService` rules, there can be only one rule for each service and therefore when defining multiple [HTTPRoute](https://istio.io/latest/docs/reference/config/networking/virtual-service/#HTTPRoute) blocks, the order in which they are defined in the yaml matters. Hence, the original `VirtualService` rule is modified rather than creating a new rule. With the modified rule, incoming requests originating from `Firefox` browsers will go to the v2 version(Black stars) of bookinfo. All other requests fall-through to the next block, which routes all traffic to the v3(Red Stars) version of bookinfo.
 
-    
-    ![alt text](pictures/image-12.png)
+![alt text](pictures/image-12.png)
 
 ### Canary deployment
 
@@ -377,8 +385,13 @@ EOF
 
 ### Circuit breaker
 **Reference**:  [https://istio.io/latest/docs/tasks/traffic-management/circuit-breaking/](https://istio.io/latest/docs/tasks/traffic-management/circuit-breaking/)
-This task shows you how to configure circuit breaking for connections, requests, and outlier detection.
--   Update the `productpage` DestinationRule with Circuit breaking logic: 
+This task shows you how to configure circuit breaking for connections, requests, and outlier detection. 
+
+If one of the endpoints ends up in an inconsistent state or is restarted for some reason, it is temporarily removed from the load balancing, only to be added back after a while.
+
+Circuit Breaker is a mechanism that allows requests to a service to be stopped if a certain number of errors are encountered. This protects downstream services from request overload and reduces latency (by avoiding timeouts since requests are stopped before reaching it).
+
+1. Update the `productpage` DestinationRule with Circuit breaking logic with the Connection Pool approach: 
 
 ````yaml
 cat <<EOF | oc replace -f -
@@ -411,19 +424,23 @@ EOF
 
 In the `DestinationRule` settings, you specified `maxConnections: 1` and `http1MaxPendingRequests: 1`. These rules indicate that if you exceed more than one connection and request concurrently, you should see some failures when the istio-proxy opens the circuit for further requests and connections.
 
--   Check that the Circuit Breaker is applied in your service from Kiali: 
+2. Check that the Circuit Breaker is applied in your service from the Kiali console: 
 ![alt text](pictures/image-4.png)
 
--  Test your Circuit Breaker 
+### Test your Circuit Breaker 
 
 1. Create a client - Fortio deployment
 ```bash
 oc apply -f https://raw.githubusercontent.com/istio/istio/release-1.26/samples/httpbin/sample-client/fortio-deploy.yaml
 ```
-2. Edit the deployment and inject the annotation `sidecar.istio.io/inject: "true"`
+Note: Fortio can be used in command line mode (prefered) and UI mode if the appropriate service is exposed. 
 
-3. `export FORTIO_POD=$(oc  get pods -l app=fortio -o 'jsonpath={.items[0].metadata.name}')`
+2. Edit the deployment and inject the annotation `sidecar.istio.io/inject: "true"` , control that your pods have two containers (side-car mode)
 
+3. Execute the following command to get your POD number: 
+```
+export FORTIO_POD=$(oc  get pods -l app=fortio -o 'jsonpath={.items[0].metadata.name}')
+```
 4. Call the service with two concurrent connections (-c 2) and send 20 requests (-n 20)
 ```bash
 oc exec "$FORTIO_POD" -c fortio -- /usr/bin/fortio load -c 2 -qps 0 -n 20 -loglevel Warning $INGRESS_HOST
@@ -438,13 +455,15 @@ Code 503 : 6 (30.0 %)
 ```bash
 oc exec "$FORTIO_POD" -c fortio -- /usr/bin/fortio load -c 4 -qps 0 -n 20 -loglevel Warning $INGRESS_HOST
 ```
+See the expected circuit breaking behavior. Only 35% of the requests succeeded and the rest were trapped by circuit breaking.
 ```console
 Code 200 : 7 (35.0 %)
 Code 503 : 13 (65.0 %)
 ```
-See the expected circuit breaking behavior. Only 35% of the requests succeeded and the rest were trapped by circuit breaking.
 
--   Complexify a bit with advanced **circuit breaking** with **outlier detection**: 
+### Circuit Breaker with outlier detection
+
+Complexify a bit with advanced **circuit breaking** with **outlier detection**: 
 
 Outlier detection is a Circuit breaker implementation that tracks the status of each individual host in the upstream service: 
 
@@ -491,11 +510,11 @@ oc exec "$FORTIO_POD" -c fortio -- /usr/bin/fortio load -c 4 -qps 0 -n 20 -logle
 Please with the concurrency parameter above and see what happens with your service. If you get a `no healthy upstream` message, this means that your service has been evicted by the outlier detection. Another idea would be to use outlier detection with a backend service like `reviews`...
 
 
-## Step 6 - Chaos Testing / Fault Injection
+## Step 6 - Chaos Testing with Fault Injection
 
 This task shows you how to inject faults to test the resiliency of your application.
 
--  Apply application version routing by running the following commands: 
+Apply application version routing by running the following commands: 
 
 1. (re)Initialize the following `VirtualService`resources to use v1 only: 
 ```bash
@@ -582,7 +601,7 @@ oc get virtualservice ratings -o yaml
 - Open the Bookinfo web application in your browser.
 - On the /productpage web page, log in as user jason.
 
-You expect the Bookinfo home page to load without errors in approximately 7 seconds. However, there is a problem: the Reviews section displays an error message:
+You expect the Bookinfo home page to load without errors in approximately 7 seconds. However, there is a problem: the Reviews section displays an error message because of a delay in the `ratings`service:
 
 ```Sorry, product reviews are currently unavailable for this book.```
 
@@ -597,7 +616,7 @@ You expect the Bookinfo home page to load without errors in approximately 7 seco
 
 You’ve found a bug. There are hard-coded timeouts in the microservices that have caused the reviews service to fail.
 
-As expected, the 7s delay you introduced doesn’t affect the reviews service because the timeout between the reviews and ratings service is hard-coded at 10s. However, there is also a hard-coded timeout between the productpage and the reviews service, coded as 3s + 1 retry for 6s total. As a result, the productpage call to reviews times out prematurely and throws an error after 6s.
+As expected, the 7s delay you introduced doesn’t affect the reviews service because the timeout between the reviews and ratings service is hard-coded at 10s. However, there is also a [hard-coded timeout between the productpage and the reviews service](https://github.com/istio/istio/blob/master/samples/bookinfo/src/productpage/productpage.py#L355), coded as 3s + 1 retry for 6s total. As a result, the productpage call to reviews times out prematurely and throws an error after 6s.
 
 Bugs like this can occur in typical enterprise applications where different teams develop different microservices independently. Istio’s fault injection rules help you identify such anomalies without impacting end users.
 
@@ -607,7 +626,8 @@ You would normally fix the problem by:
 1.	Either increasing the productpage to reviews service timeout or decreasing the reviews to ratings timeout
 2.	Stopping and restarting the fixed microservice
 3.	Confirming that the /productpage web page returns its response without any errors.
-However, you already have a fix running in v3 of the reviews service. The reviews:v3 service reduces the reviews to ratings timeout from 10s to 2.5s so that it is compatible with (less than) the timeout of the downstream productpage requests.
+
+However, you already have a fix running in v3 of the reviews service. The reviews:v3 service [reduces the reviews to ratings timeout from 10s to 2.5s](https://github.com/istio/istio/blob/master/samples/bookinfo/src/reviews/reviews-application/src/main/java/application/rest/LibertyRestEndpoint.java#L147) so that it is compatible with (less than) the timeout of the downstream productpage requests.
 
 If you migrate all traffic to reviews:v3 ( traffic shifting ), you can then try to change the delay rule to any amount less than 2.5s, for example 2s, and confirm that the end-to-end flow continues without any errors
 ```yaml
@@ -734,7 +754,7 @@ If the rule propagated successfully to all pods, the page loads immediately and 
 
 ### Chaos Testing in production
 
-1.Check your application resilience by killing pods. Note that dedicated Chaos engineering tools exist to do so, like `Chaos Monkey`, `Litmus` or others. Here a simple kill will do the job, but tools exist for more complex scenarios.
+Finally, you can check the application resilience by killing pods. Note that dedicated Chaos engineering tools exist to do so, like `Chaos Monkey`, `Litmus` or others. Here a simple kill will do the job, but tools exist for more complex scenarios.
 
 `oc exec $(oc get pods -l app=details -o jsonpath='{.items[0].metadata.name}') -- pkill ruby`
 
@@ -745,7 +765,7 @@ If the rule propagated successfully to all pods, the page loads immediately and 
  <img src="pictures/image-15.png" width=80% height=80%>
 </p>
 
--  *Fig. Below, Istio/Kiali error reporting:* 
+-  *Fig. Below, Istio/Kiali reporting error, aka "black hole":* 
 
 ![alt text](pictures/image-16.png)
 
