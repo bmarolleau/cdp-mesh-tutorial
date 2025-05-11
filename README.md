@@ -192,16 +192,18 @@ The components deployed on the service mesh by default are not exposed outside t
 oc create -f https://raw.githubusercontent.com/bmarolleau/cdp-mesh-tutorial/refs/heads/main/samples/istio/bookinfo/bookinfo-gateway.yaml
 ```
     
--   Get the **ROUTE** of the Istio Ingress Gateway.
+2. Get the `Route` of the Istio Ingress Gateway.
     
--   `oc get routes -n istio-system-teamX istio-ingressgateway` 
+  ```
+   oc get routes -n istio-system-teamX istio-ingressgateway
+   ``` 
     
--   Save the HOST address that you retrieved in the previous step, as it will be used to access the BookInfo app in later parts of the tutorial. Create an environment variable called `$INGRESS_HOST` with your HOST address.
+3. Save the HOST address that you retrieved in the previous step, as it will be used to access the BookInfo app in later parts of the tutorial. Create an environment variable called `$INGRESS_HOST` with your HOST address.
     
 ```
 INGRESS_HOST=$(oc get route -n istio-system-teamX | grep istio-ingressgateway | awk ' { print $2"/productpage" }')
 ```    
- Visit the application by going to `http://$INGRESS_HOST` in a new tab. If you keep hitting Refresh, you should see different versions of the page in random order (v1 - no stars, v2 - black stars, v3 - red stars). **_Keep that browser tab open for later_**.
+ 4. Visit the application by going to `http://$INGRESS_HOST` in a new tab. If you keep hitting Refresh, you should see different versions of the page in random order (v1 - no stars, v2 - black stars, v3 - red stars). **_Keep that browser tab open for later_**.
 
 ## Step 4: Observe service telemetry: metrics and tracing
 
@@ -429,7 +431,7 @@ In the `DestinationRule` settings, you specified `maxConnections: 1` and `http1M
 
 ### Test your Circuit Breaker 
 
-1. Create a client - Fortio deployment
+1. Create a client - Fortio deployment - a benchmarking tool to test benchmark service performance and reliability: 
 ```bash
 oc apply -f https://raw.githubusercontent.com/istio/istio/release-1.26/samples/httpbin/sample-client/fortio-deploy.yaml
 ```
@@ -467,6 +469,7 @@ Complexify a bit with advanced **circuit breaking** with **outlier detection**:
 
 Outlier detection is a Circuit breaker implementation that tracks the status of each individual host in the upstream service: 
 
+1. Apply this destination rule: 
 ````yaml
 cat <<EOF | oc replace -f -
 # Places some circuit breaking logic on productpage
@@ -503,11 +506,14 @@ EOF
 
 ![alt text](pictures/image-3.png)
 
--   Inject a workload and play with the settings. In real life a workload simulation tool can be used like [`fortio`](https://github.com/fortio/fortio), `jmeter` or equivalent, but a simple curl can also do the job in simple cases.
+2.  Inject a workload and play with the settings. In real life a workload simulation tool can be used like [`fortio`](https://github.com/fortio/fortio), `jmeter` or equivalent, but a simple curl can also do the job in simple cases.
 ```
 oc exec "$FORTIO_POD" -c fortio -- /usr/bin/fortio load -c 4 -qps 0 -n 20 -loglevel Warning $INGRESS_HOST
 ```
-Please with the concurrency parameter above and see what happens with your service. If you get a `no healthy upstream` message, this means that your service has been evicted by the outlier detection. Another idea would be to use outlier detection with a backend service like `reviews`...
+
+3. Play with the concurrency parameter above and see what happens with your service. If you get a `no healthy upstream` message, this means that your service has been evicted by the outlier detection. 
+
+Many other tests could be performed: another idea would be to use outlier detection with a backend service like `reviews`...
 
 
 ## Step 6 - Chaos Testing with Fault Injection
