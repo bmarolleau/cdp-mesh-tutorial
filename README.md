@@ -758,7 +758,7 @@ Finally, you can check the application resilience by killing pods. Note that ded
 
 `oc exec $(oc get pods -l app=details -o jsonpath='{.items[0].metadata.name}') -- pkill ruby`
 
-2. Check what happens in your apps. It is still responding, Service mesh in `Kiali`reports warnings but the application did not crash. The crash in the details microservice did not cause other microservices to fail. This behavior means you did not have a cascading failure in this situation. Instead, you had gradual service degradation: despite one microservice crashing, the application could still provide useful functionality. It displayed the reviews and the basic information about the book.
+Check what happens in your apps. It is still responding, Service mesh in `Kiali`reports warnings but the application did not crash. The crash in the details microservice did not cause other microservices to fail. This behavior means you did not have a cascading failure in this situation. Instead, you had gradual service degradation: despite one microservice crashing, the application could still provide useful functionality. It displayed the reviews and the basic information about the book.
 
 -  *Fig. Hereunder, Error message but the app is still okay:* 
  <p>
